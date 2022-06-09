@@ -16,8 +16,8 @@
 - [x] Deployment instructions are written in `README.md` 
 - [x] Write tests (unit tests and integration tests)
 - [x] An admin can get an overview of active and inactive tokens
-- [ ] Document the APIs in Swagger
-- [ ] The invite token validation logic needs to be throttled (limit the requests coming from a
+- [x] Document the APIs in Swagger
+- [x] The invite token validation logic needs to be throttled (limit the requests coming from a
   specific client)
 
 ## How to run this project
@@ -31,7 +31,7 @@ cp .env.template .env
 make start
 # down all services
 make stop
-# run unit test locally
+# run tests locally
 make test
 ```
 
@@ -39,7 +39,7 @@ make test
 
 ### Project structure
 
-This project has 5 Domain layers:
+This project has **5 Domain layers**:
 * Model Layer
 * Storage Layer: interact with databases such as RLDB/NoSQL or File System or Remote API.
 * Repository Layer (optional): provides data for the Business Layer.
@@ -52,14 +52,19 @@ This project has 5 Domain layers:
 
 The Go server will run default on port `8000`.
 
-- GET `/api/v1/users/invitation`: Admin generates an invitation token
+- GET `/api/v1/tokens/generate`: Admin generates an invitation token
 - POST `/api/v1/login/invitation`: login with an invitation token
-- GET `/api/v1/token/validation?invitation_token=`: validate an invitation token
-- GET `/api/v1/token/invitation?status=`: Admin gets invitation token by status
-- PATCH `/api/v1/token/invitation/:invitation_token`: Admin disable/enable an invitation token
+- GET `/api/v1/tokens/:token/validation`: validate an invitation token
+- GET `/api/v1/tokens?status=`: Admin gets invitation token by status
+- PUT `/api/v1/tokens/:token`: Admin disable/enable an invitation token
 - POST `/api/v1/register`: create a new user with email and password
 - POST `/api/v1/login`: login with email and password
 
 ### Documentation
 
-Swagger
+```bash
+# install `go-swagger` with Go version 1.18
+make swagger_install # or `go install github.com/go-swagger/go-swagger/cmd/swagger@lates`
+# generate `docs/` folder
+swag init
+```

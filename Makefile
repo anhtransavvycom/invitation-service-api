@@ -11,3 +11,9 @@ start:
 
 stop:
 	docker compose down
+
+swagger_install:
+	which swag || go install github.com/swaggo/swag/cmd/swag@latest
+
+swagger: swagger_install
+	swag init
