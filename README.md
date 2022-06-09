@@ -62,8 +62,10 @@ The Go server will run default on port `8000`.
 
 ### Documentation
 
+Swagger docs run on `http://localhost:8000/swagger/index.html`
+
 ```bash
-# install `go-swagger` with Go version 1.18
+# install `gin-swagger` with Go version 1.18
 make swagger_install # or `go install github.com/go-swagger/go-swagger/cmd/swagger@lates`
 # generate `docs/` folder
 swag init

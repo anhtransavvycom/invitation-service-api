@@ -24,3 +24,5 @@ bin/
 
 # ignore local environment variable file
 .env
+
+.DS_Store
