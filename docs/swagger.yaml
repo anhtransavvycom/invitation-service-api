@@ -1,0 +1,277 @@
+definitions:
+  common.AppError:
+    properties:
+      error_key:
+        type: string
+      log:
+        type: string
+      message:
+        type: string
+      status_code:
+        type: integer
+    type: object
+  common.SuccessRes:
+    properties:
+      data: {}
+      filter: {}
+      paging: {}
+    type: object
+  tokenprovider.Token:
+    properties:
+      created:
+        type: string
+      expiry:
+        description: milliseconds
+        type: integer
+      token:
+        type: string
+    type: object
+  usermodel.Account:
+    properties:
+      access_token:
+        $ref: '#/definitions/tokenprovider.Token'
+      refresh_token:
+        $ref: '#/definitions/tokenprovider.Token'
+    type: object
+  usermodel.InvitationToken:
+    properties:
+      expiry:
+        type: integer
+      status:
+        type: integer
+      token:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /login:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Login with existing account
+      parameters:
+      - description: email
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: password
+        in: formData
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.SuccessRes'
+            - properties:
+                data:
+                  $ref: '#/definitions/usermodel.Account'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.AppError'
+      summary: Login
+      tags:
+      - auth
+  /login/invitation:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Login with invitation token
+      parameters:
+      - description: invitation token
+        in: formData
+        name: invitation_token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.SuccessRes'
+            - properties:
+                data:
+                  $ref: '#/definitions/usermodel.Account'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.AppError'
+      summary: Login with invitation token
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Register for new account
+      parameters:
+      - description: email
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: password
+        in: formData
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.SuccessRes'
+            - properties:
+                data:
+                  type: integer
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.AppError'
+      summary: Register
+      tags:
+      - auth
+  /tokens:
+    get:
+      description: List invitation tokens
+      parameters:
+      - description: token status
+        enum:
+        - 0
+        - 1
+        in: query
+        name: status
+        required: true
+        type: integer
+      - description: Authorization header
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.SuccessRes'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/usermodel.InvitationToken'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.AppError'
+      summary: List invitation tokens
+      tags:
+      - token
+  /tokens/{token}:
+    put:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Update an invitation token
+      parameters:
+      - description: token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: token status
+        enum:
+        - 0
+        - 1
+        in: formData
+        name: status
+        required: true
+        type: integer
+      - description: Authorization header
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.AppError'
+      summary: Update an invitation token
+      tags:
+      - token
+  /tokens/{token}/validation:
+    post:
+      description: check weather invitation token is valid
+      parameters:
+      - description: invitation token to be validated
+        in: path
+        name: token
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.AppError'
+      summary: Validate invitation token
+      tags:
+      - token
+  /tokens/generate:
+    post:
+      description: Generate an invitation token
+      parameters:
+      - description: Authorization header
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.SuccessRes'
+            - properties:
+                data:
+                  $ref: '#/definitions/usermodel.InvitationToken'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.AppError'
+      summary: Generate invitation token
+      tags:
+      - token
+swagger: "2.0"

@@ -5,12 +5,13 @@ import (
 	"app-invite-service/component/tokenprovider"
 	"app-invite-service/server"
 	"fmt"
+	"log"
+
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
 )
 
 func main() {
@@ -27,7 +28,7 @@ func main() {
 
 	// create redis client
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("localhost:%d", config.RedisPort()),
+		Addr:     fmt.Sprintf("redis:%v", config.RedisPort()),
 		Password: config.RedisPassword(), // no password set
 		DB:       0,                      // use default DB
 	})

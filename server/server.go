@@ -3,22 +3,26 @@ package server
 import (
 	"app-invite-service/component"
 	"app-invite-service/component/tokenprovider"
+	docs "app-invite-service/docs"
 	"app-invite-service/middleware"
 	"app-invite-service/module/user/usertransport/ginuser"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
-	"github.com/golang-migrate/migrate/v4"
-	mmysql "github.com/golang-migrate/migrate/v4/database/mysql"
-	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
+	"github.com/golang-migrate/migrate/v4"
+	mmysql "github.com/golang-migrate/migrate/v4/database/mysql"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"gorm.io/gorm"
 )
 
 // Server represents server
@@ -55,6 +59,13 @@ func (s *Server) RunMigration(dbConnectionStr string) {
 
 // Start start http server
 func (s *Server) Start() {
+	// programmatically set swagger info
+	docs.SwaggerInfo.Title = "Invitation Service API"
+	docs.SwaggerInfo.Description = "Invitation Service API for the Catalyst Experience App"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost:8000"
+	docs.SwaggerInfo.BasePath = "/api/v1"
+
 	// Create context that listens for the interrupt signal from the OS.
 	// Reference: https://github.com/gin-gonic/examples/blob/master/graceful-shutdown/graceful-shutdown/notify-with-context/server.go
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -72,32 +83,35 @@ func (s *Server) Start() {
 	appCtx := component.NewAppContext(s.DBConn, s.RedisConn, s.SecretKey, s.TokenConfig)
 	r.Use(middleware.Recover(appCtx))
 
+	docs.SwaggerInfo.BasePath = "/api/v1"
 	v1 := r.Group("/api/v1")
 
 	v1.POST("/register", ginuser.Register(appCtx))
-	v1.POST("/login", ginuser.Login(appCtx))
 	v1.POST("/login/invitation", ginuser.LoginWithInviteToken(appCtx))
+	v1.POST("/login", ginuser.Login(appCtx))
 
-	v1.GET("/token/validation", ginuser.ValidateInvitationToken(appCtx))
-	v1.GET(
-		"/token/invitation",
-		middleware.RequiredAuth(appCtx),
-		middleware.RequiredAdmin(appCtx),
-		ginuser.ListInvitationToken(appCtx),
-	)
-	v1.PATCH(
-		"/token/invitation/:id",
+	v1.POST("/tokens/:token/validation", middleware.RequestLimit(5), ginuser.ValidateInvitationToken(appCtx))
+	v1.PUT(
+		"/tokens/:token",
+
 		middleware.RequiredAuth(appCtx),
 		middleware.RequiredAdmin(appCtx),
 		ginuser.UpdateInvitationToken(appCtx),
 	)
-
-	v1.GET(
-		"users/invitation",
+	v1.POST(
+		"tokens/generate",
 		middleware.RequiredAuth(appCtx),
 		middleware.RequiredAdmin(appCtx),
 		ginuser.GenerateInviteToken(appCtx),
 	)
+	v1.GET(
+		"/tokens",
+		middleware.RequiredAuth(appCtx),
+		middleware.RequiredAdmin(appCtx),
+		ginuser.ListInvitationToken(appCtx),
+	)
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.Port),
