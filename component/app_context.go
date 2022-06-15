@@ -26,7 +26,7 @@ func NewAppContext(
 	secretKey string,
 	tokenConfig *tokenprovider.TokenConfig,
 ) *appCtx {
-	return &appCtx{secretKey: secretKey, db: db, redis: redis, tokenConfig: tokenConfig}
+	return &appCtx{secretKey, db, redis, tokenConfig}
 }
 
 func (ctx *appCtx) GetMainDBConnection() *gorm.DB {

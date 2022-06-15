@@ -4,6 +4,7 @@ import (
 	"app-invite-service/common"
 	"app-invite-service/component"
 	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 // Recover needs AppContext due to 2 reasons below
@@ -32,5 +33,30 @@ func Recover(_ component.AppContext) gin.HandlerFunc {
 		}()
 
 		c.Next()
+	}
+}
+
+func FiberRecover(_ component.AppContext) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		defer func() {
+			if err := recover(); err != nil {
+				c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSONCharsetUTF8)
+
+				// if error is an AppError
+				if appErr, ok := err.(*common.AppError); ok {
+					c.Status(appErr.StatusCode).JSON(appErr)
+					panic(err)
+				}
+
+				appErr := common.ErrInternal(err.(error))
+				c.Status(appErr.StatusCode).JSON(appErr)
+				//c.AbortWithStatusJSON(appErr.StatusCode, appErr)
+				panic(err)
+			}
+		}()
+
+		c.Next()
+
+		return nil
 	}
 }

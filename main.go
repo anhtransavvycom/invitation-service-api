@@ -55,5 +55,6 @@ func main() {
 	}()
 
 	s.RunMigration(config.DBConnectionURL())
-	s.Start()
+	//s.Start()
+	s.StartFiber()
 }

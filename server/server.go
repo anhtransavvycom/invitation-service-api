@@ -5,11 +5,13 @@ import (
 	"app-invite-service/component/tokenprovider"
 	docs "app-invite-service/docs"
 	"app-invite-service/middleware"
+	"app-invite-service/module/user/usertransport/fiberuser"
 	"app-invite-service/module/user/usertransport/ginuser"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/gofiber/fiber/v2"
 	"log"
 	"net/http"
 	"os/signal"
@@ -143,6 +145,63 @@ func (s *Server) Start() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown: ", err)
+	}
+
+	log.Println("Server exiting")
+}
+
+// StartFiber start http server
+func (s *Server) StartFiber() {
+	// programmatically set swagger info
+	//docs.SwaggerInfo.Title = "Invitation Service API"
+	//docs.SwaggerInfo.Description = "Invitation Service API for the Catalyst Experience App"
+	//docs.SwaggerInfo.Version = "1.0"
+	//docs.SwaggerInfo.Host = "localhost:8000"
+	//docs.SwaggerInfo.BasePath = "/api/v1"
+
+	// Create context that listens for the interrupt signal from the OS.
+	// Reference: https://github.com/gin-gonic/examples/blob/master/graceful-shutdown/graceful-shutdown/notify-with-context/server.go
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	r := fiber.New()
+
+	appCtx := component.NewAppContext(s.DBConn, s.RedisConn, s.SecretKey, s.TokenConfig)
+	r.Use(middleware.FiberRecover(appCtx))
+
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	v1 := r.Group("/api/v1")
+
+	v1.Post("/login", fiberuser.Login(appCtx))
+
+	//r.Get("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+
+	// Initializing the server in a goroutine so that
+	// it won't block the graceful shutdown handling below
+	go func() {
+		log.Printf("Server run on PORT :%d\n", s.Port)
+		if err := r.Listen(fmt.Sprintf(":%d", s.Port)); err != nil && errors.Is(err, http.ErrServerClosed) {
+			log.Printf("listen: %s\n", err)
+		}
+	}()
+
+	if s.ServerReady != nil {
+		s.ServerReady <- true
+	}
+
+	// Listen for the interrupt signal.
+	<-ctx.Done()
+
+	// Restore default behavior on the interrupt signal and notify user of shutdown.
+	stop()
+	log.Println("shutting down gracefully, press Ctrl+C again to force")
+
+	// The context is used to inform the server it has 5 seconds to finish
+	// the request it is currently handling
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := r.Shutdown(); err != nil {
 		log.Fatal("Server forced to shutdown: ", err)
 	}
 
